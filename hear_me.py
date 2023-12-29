@@ -1,33 +1,31 @@
-import pyaudio
-import sys
+import sounddevice as sd
+import numpy as np
 
 # Constants
-CHUNK = 1024
-FORMAT = pyaudio.paInt16 
+CHUNK = 2048
+RATE = 22050
 CHANNELS = 1
-RATE = 44100
 
-# Initialize PyAudio
-py_Audio = pyaudio.PyAudio()
+# Callback function to stream audio
+def callback(indata, outdata, frames, time, status):
+    if status:
+        print(status)
+    outdata[:] = indata
 
-# Open Stream
-stream = py_Audio.open(format=FORMAT,
-                       channels=CHANNELS,
-                       rate=RATE,
-                       input=True,
-                       output=True,
-                       frames_per_buffer=CHUNK)
+# Open a stream
+with sd.Stream(
+    samplerate=RATE,
+    blocksize=CHUNK,
+    channels=CHANNELS,
+    dtype=np.int16,
+    callback=callback
+) as stream:
+    print("Recording and playing back. Press Ctrl+C to stop.")
+    try:
+        # Keep the stream active
+        while True:
+            sd.sleep(1000)  # Sleep for 1000 milliseconds (1 second) at a time
+    except KeyboardInterrupt:
+        print("\nStopping...")
 
-print("Recording and playing back. Press Ctrl+C to stop.")
-
-try:
-    while True:
-        data = stream.read(CHUNK)
-        stream.write(data, CHUNK)
-except KeyboardInterrupt:
-    # Handle Ctrl+C
-    print("\nStopping . . . ")
-    stream.stop_stream
-    stream.close()
-    py_Audio.terminate()
-    sys.exit()
+    # The stream is automatically closed when exiting the 'with' block
